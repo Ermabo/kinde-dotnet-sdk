@@ -14,8 +14,36 @@ using System;
 namespace Kinde.Api.Client
 {
     /// <summary>
-    /// API Exception
+    /// Represents an exception thrown by the Kinde API when an HTTP request fails.
+    /// This exception contains information about the HTTP response including status code,
+    /// error content, and headers that can be used for error handling and debugging.
     /// </summary>
+    /// <remarks>
+    /// <para>
+    /// The ApiException is thrown when an API call returns an HTTP status code indicating an error (4xx or 5xx).
+    /// You can use the helper properties to easily pattern match on different error types:
+    /// </para>
+    /// <example>
+    /// <code>
+    /// try
+    /// {
+    ///     var user = await usersApi.GetUserAsync(userId);
+    /// }
+    /// catch (ApiException ex) when (ex.IsNotFound)
+    /// {
+    ///     Console.WriteLine("User not found");
+    /// }
+    /// catch (ApiException ex) when (ex.IsUnauthorized)
+    /// {
+    ///     Console.WriteLine("Invalid or expired token");
+    /// }
+    /// catch (ApiException ex) when (ex.IsClientError)
+    /// {
+    ///     Console.WriteLine($"Client error: {ex.Message}");
+    /// }
+    /// </code>
+    /// </example>
+    /// </remarks>
     public class ApiException : Exception
     {
         /// <summary>
@@ -35,6 +63,60 @@ namespace Kinde.Api.Client
         /// </summary>
         /// <value>HTTP headers</value>
         public Multimap<string, string> Headers { get; private set; }
+
+        /// <summary>
+        /// Gets a value indicating whether this exception represents a client error (4xx status code).
+        /// </summary>
+        /// <value>True if the status code is in the 400-499 range; otherwise, false.</value>
+        public bool IsClientError => ErrorCode >= 400 && ErrorCode < 500;
+
+        /// <summary>
+        /// Gets a value indicating whether this exception represents a server error (5xx status code).
+        /// </summary>
+        /// <value>True if the status code is in the 500-599 range; otherwise, false.</value>
+        public bool IsServerError => ErrorCode >= 500 && ErrorCode < 600;
+
+        /// <summary>
+        /// Gets a value indicating whether this exception represents a 400 Bad Request error.
+        /// </summary>
+        /// <value>True if the status code is 400; otherwise, false.</value>
+        public bool IsBadRequest => ErrorCode == 400;
+
+        /// <summary>
+        /// Gets a value indicating whether this exception represents a 401 Unauthorized error.
+        /// </summary>
+        /// <value>True if the status code is 401; otherwise, false.</value>
+        public bool IsUnauthorized => ErrorCode == 401;
+
+        /// <summary>
+        /// Gets a value indicating whether this exception represents a 403 Forbidden error.
+        /// </summary>
+        /// <value>True if the status code is 403; otherwise, false.</value>
+        public bool IsForbidden => ErrorCode == 403;
+
+        /// <summary>
+        /// Gets a value indicating whether this exception represents a 404 Not Found error.
+        /// </summary>
+        /// <value>True if the status code is 404; otherwise, false.</value>
+        public bool IsNotFound => ErrorCode == 404;
+
+        /// <summary>
+        /// Gets a value indicating whether this exception represents a 409 Conflict error.
+        /// </summary>
+        /// <value>True if the status code is 409; otherwise, false.</value>
+        public bool IsConflict => ErrorCode == 409;
+
+        /// <summary>
+        /// Gets a value indicating whether this exception represents a 422 Unprocessable Entity error.
+        /// </summary>
+        /// <value>True if the status code is 422; otherwise, false.</value>
+        public bool IsUnprocessableEntity => ErrorCode == 422;
+
+        /// <summary>
+        /// Gets a value indicating whether this exception represents a 429 Too Many Requests error.
+        /// </summary>
+        /// <value>True if the status code is 429; otherwise, false.</value>
+        public bool IsRateLimitExceeded => ErrorCode == 429;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="ApiException"/> class.
