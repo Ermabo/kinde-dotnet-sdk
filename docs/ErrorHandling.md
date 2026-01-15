@@ -151,6 +151,9 @@ while (retryCount < maxRetries)
 The `ErrorContent` property contains the response body, which often includes additional error information:
 
 ```csharp
+using System.Text.Json;
+using Kinde.Api.Client;
+
 try
 {
     var user = await usersApi.CreateUserAsync(request);
@@ -164,7 +167,8 @@ catch (ApiException ex) when (ex.IsBadRequest || ex.IsUnprocessableEntity)
     {
         try
         {
-            var errorDetails = JsonConvert.DeserializeObject<ErrorResponse>(jsonContent);
+            // Using System.Text.Json for modern .NET
+            var errorDetails = JsonSerializer.Deserialize<ErrorResponse>(jsonContent);
             foreach (var error in errorDetails.Errors)
             {
                 Console.WriteLine($"  - {error.Field}: {error.Message}");
@@ -358,6 +362,8 @@ catch (ApiException ex) when (ex.IsServerError)
 When writing unit tests, you can create ApiException instances to test your error handling:
 
 ```csharp
+using Kinde.Api.Client;
+
 [Test]
 public void HandleNotFoundError()
 {
