@@ -10,6 +10,51 @@ You can also use the .NET starter kit [here](https://github.com/kinde-starter-k
 
 For details on integrating this SDK into your project, head over to the [Kinde docs](https://kinde.com/docs/) and see the [.NET SDK](https://kinde.com/docs/developer-tools/dotnet-sdk/) doc 👍🏼.
 
+### Using with Dependency Injection
+
+The Kinde SDK supports ASP.NET Core dependency injection. See the [Dependency Injection Guide](DEPENDENCY_INJECTION.md) for comprehensive examples on:
+
+- Registering KindeClient as a service (Singleton, Scoped, or Transient)
+- Configuration with appsettings.json
+- Usage in controllers and services
+- Machine-to-machine (M2M) applications
+- Web applications with user authentication
+- Testing with mocks
+
+**Quick Example:**
+
+```csharp
+// Program.cs
+using Kinde.Api.Extensions;
+
+var builder = WebApplication.CreateBuilder(args);
+
+// For M2M applications - Singleton
+builder.Services.AddKindeClient(options =>
+{
+    options.Domain = "https://yourapp.kinde.com";
+    options.ClientId = "your-client-id";
+    options.ClientSecret = "your-client-secret";
+    options.Audience = "https://yourapp.kinde.com/api";
+});
+
+// OR for web applications - Scoped
+builder.Services.AddKindeClientScoped(options =>
+{
+    options.Domain = "https://yourapp.kinde.com";
+    options.ReplyUrl = "https://myapp.com/callback";
+    options.LogoutUrl = "https://myapp.com";
+});
+
+var app = builder.Build();
+
+// Use in endpoints or controllers via constructor injection
+app.MapGet("/users", async (IKindeClient kindeClient) =>
+{
+    // Your code here
+});
+```
+
 ## Publishing
 
 The core team handles publishing.

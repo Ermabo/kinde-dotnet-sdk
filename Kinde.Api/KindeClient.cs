@@ -12,7 +12,7 @@ using Microsoft.Extensions.Logging.Console;
 
 namespace Kinde.Api.Client
 {
-    public class KindeClient : ApiClient
+    public class KindeClient : ApiClient, IKindeClient
     {
         #region Fields and Properties
 
