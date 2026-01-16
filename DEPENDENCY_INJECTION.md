@@ -372,19 +372,28 @@ builder.Services.AddHostedService<UserSyncService>();
 | **Scoped** | Web apps, user auth | Isolated per request, safe for multi-user | More memory usage |
 | **Transient** | Complete isolation needed | Fresh instance every time | Most memory usage, overhead |
 
+### Resource Management
+
+The `KindeClient` class implements `IDisposable` (through `ApiClient`), which means:
+- **Scoped and Transient**: The DI container automatically disposes instances at the end of their lifetime, properly cleaning up HttpClient resources
+- **Singleton**: The instance lives for the application lifetime, which is appropriate for long-running services
+- HttpClient instances are automatically disposed when their parent KindeClient is disposed
+
+For typical usage scenarios, the default behavior provides proper resource management. For high-traffic production environments, consider using the singleton lifetime when possible to minimize resource allocation.
+
 ## Advanced Scenarios
 
 ### Custom HttpClient Configuration
 
-If you need custom HttpClient configuration (e.g., with Polly for resilience):
+If you need custom HttpClient configuration, you can create a custom factory. Note that `KindeClient` implements `IDisposable`, so the DI container will handle cleanup:
 
 ```csharp
-// Create a custom factory
+// For singleton with custom configuration
 builder.Services.AddSingleton<IKindeClient>(sp =>
 {
     var config = sp.GetRequiredService<IConfiguration>();
     
-    // Create custom HttpClient with resilience policies
+    // Create custom HttpClient (will be disposed when KindeClient is disposed)
     var httpClient = new KindeHttpClient();
     
     var appConfig = new ApplicationConfiguration(
@@ -393,6 +402,57 @@ builder.Services.AddSingleton<IKindeClient>(sp =>
         config["Kinde:LogoutUrl"]!
     );
     
+    return new KindeClient(appConfig, httpClient);
+});
+
+// For scoped with automatic disposal
+builder.Services.AddScoped<IKindeClient>(sp =>
+{
+    var config = sp.GetRequiredService<IConfiguration>();
+    var httpClient = new KindeHttpClient();
+    
+    var appConfig = new ApplicationConfiguration(
+        config["Kinde:Domain"]!,
+        config["Kinde:ReplyUrl"]!,
+        config["Kinde:LogoutUrl"]!
+    );
+    
+    // The DI container will dispose this at the end of the scope
+    return new KindeClient(appConfig, httpClient);
+});
+```
+
+### Using IHttpClientFactory (Advanced)
+
+For very high-traffic scenarios where you want more control over HttpClient lifecycle, you can integrate with `IHttpClientFactory`. However, note that `KindeHttpClient` has specific configuration, so this approach requires careful consideration:
+
+```csharp
+// Register named HttpClient
+builder.Services.AddHttpClient("KindeClient", client =>
+{
+    client.DefaultRequestHeaders.TryAddWithoutValidation("User-Agent", "PostmanRuntime/7.29.2");
+})
+.ConfigurePrimaryHttpMessageHandler(() => new HttpClientHandler 
+{ 
+    AllowAutoRedirect = false 
+});
+
+// Use the factory to create KindeClient
+builder.Services.AddScoped<IKindeClient>(sp =>
+{
+    var config = sp.GetRequiredService<IConfiguration>();
+    var httpClientFactory = sp.GetRequiredService<IHttpClientFactory>();
+    
+    // Get HttpClient from factory
+    var httpClient = httpClientFactory.CreateClient("KindeClient");
+    
+    var appConfig = new ApplicationConfiguration(
+        config["Kinde:Domain"]!,
+        config["Kinde:ReplyUrl"]!,
+        config["Kinde:LogoutUrl"]!
+    );
+    
+    // Note: When using HttpClientFactory, the HttpClient disposal is managed by the factory
     return new KindeClient(appConfig, httpClient);
 });
 ```
