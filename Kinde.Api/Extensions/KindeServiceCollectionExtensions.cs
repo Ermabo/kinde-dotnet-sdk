@@ -39,17 +39,13 @@ namespace Kinde.Api.Extensions
             // Configure options
             services.Configure(configureOptions);
 
-            // Register HttpClient with proper lifetime management
-            services.TryAddSingleton<HttpClient>(sp =>
-            {
-                return new KindeHttpClient();
-            });
-
             // Register KindeClient as singleton
+            // Note: We create a single KindeHttpClient instance for the singleton
+            // For production use with high traffic, consider using IHttpClientFactory
             services.TryAddSingleton<IKindeClient>(sp =>
             {
                 var options = sp.GetRequiredService<IOptions<KindeClientOptions>>().Value;
-                var httpClient = sp.GetRequiredService<HttpClient>();
+                var httpClient = new KindeHttpClient();
 
                 var appConfig = new ApplicationConfiguration(
                     options.Domain,
@@ -74,6 +70,10 @@ namespace Kinde.Api.Extensions
         /// <param name="services">The service collection</param>
         /// <param name="configureOptions">Action to configure KindeClientOptions</param>
         /// <returns>The service collection for chaining</returns>
+        /// <remarks>
+        /// Note: This creates a new HttpClient for each scope. For high-traffic applications,
+        /// consider implementing IHttpClientFactory pattern or using singleton lifetime if appropriate.
+        /// </remarks>
         /// <example>
         /// <code>
         /// services.AddKindeClientScoped(options =>
@@ -100,6 +100,7 @@ namespace Kinde.Api.Extensions
                 var options = sp.GetRequiredService<IOptions<KindeClientOptions>>().Value;
                 
                 // Create a new HttpClient for each scope
+                // Note: For production high-traffic scenarios, consider using IHttpClientFactory
                 var httpClient = new KindeHttpClient();
 
                 var appConfig = new ApplicationConfiguration(
@@ -125,6 +126,10 @@ namespace Kinde.Api.Extensions
         /// <param name="services">The service collection</param>
         /// <param name="configureOptions">Action to configure KindeClientOptions</param>
         /// <returns>The service collection for chaining</returns>
+        /// <remarks>
+        /// Note: This creates a new HttpClient for each instance. This should be used sparingly
+        /// in high-traffic applications. Consider singleton or scoped lifetime when possible.
+        /// </remarks>
         /// <example>
         /// <code>
         /// services.AddKindeClientTransient(options =>
@@ -151,6 +156,7 @@ namespace Kinde.Api.Extensions
                 var options = sp.GetRequiredService<IOptions<KindeClientOptions>>().Value;
                 
                 // Create a new HttpClient for each instance
+                // Note: Transient instances should be used carefully to avoid socket exhaustion
                 var httpClient = new KindeHttpClient();
 
                 var appConfig = new ApplicationConfiguration(
